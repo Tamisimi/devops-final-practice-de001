@@ -3,11 +3,8 @@ FROM gradle:8.7-jdk21-alpine AS build
 WORKDIR /app
 
 COPY build.gradle settings.gradle ./
-COPY gradle ./gradle
-RUN gradle dependencies --no-daemon || true
-
 COPY src ./src
-RUN gradle bootJar -x test --no-daemon
+RUN gradle bootJar -x test --no-daemon --stacktrace
 
 # Stage 2 – runtime
 FROM eclipse-temurin:21-jre-alpine
