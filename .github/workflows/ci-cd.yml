@@ -1,0 +1,63 @@
+name: CI-CD Practice
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check student.env
+        run: |
+          test -f student.env
+          grep -q "APP_PORT=" student.env
+          echo "student.env OK"
+
+      - name: Set image name
+        id: meta
+        run: |
+          echo "image=ghcr.io/${{ github.repository }}:latest" >> $GITHUB_OUTPUT
+          echo "image_sha=ghcr.io/${{ github.repository }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      # TODO 1 – build: compose up with student.env (CI may only build image)
+      - name: Build app image
+        run: |
+          docker build -t ${{ steps.meta.outputs.image }} \
+            --build-arg APP_VERSION=${{ github.sha }} .
+
+      # TODO 2 – login GHCR
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push images
+        run: |
+          docker tag ${{ steps.meta.outputs.image }} ${{ steps.meta.outputs.image_sha }}
+          docker push ${{ steps.meta.outputs.image }}
+          docker push ${{ steps.meta.outputs.image_sha }}
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+            mkdir -p ~/devops-final-practice
+            cd ~/devops-final-practice
+            echo "Deploy placeholder - clone/pull repo and compose up on exam day"
+            # docker login ghcr.io -u USER --password-stdin
+            # docker compose --env-file student.env pull
+            # docker compose --env-file student.env up -d
